@@ -6592,8 +6592,8 @@ input:checked + .slider:before {
 // START: Firebase Configuration
 
 // আপনার দেওয়া কনফিগারেশন এখানে যুক্ত করা হয়েছে।
-const userFirebaseConfig = {
-  apiKey: "AIzaSyBmTptSZWBnB5MRT8jIWM6knak2L2Xv40",
+ const firebaseConfig = {
+  apiKey: "AIzaSyBmTptSZWbNB5MrT8jIWVm6knak2L2Xv40",
   authDomain: "bangla-toolbox1.firebaseapp.com",
   projectId: "bangla-toolbox1",
   storageBucket: "bangla-toolbox1.firebasestorage.app",
@@ -12120,8 +12120,6 @@ function initializeClockTab() {
 
 // ====================================================================
 // START: GLOBAL VISITOR COUNTER (FIREBASE)
-// এই সম্পূর্ণ নতুন কোড ব্লকটি আপনার ফাইলের শেষে থাকা <script> ট্যাগের ভেতরে যোগ করুন
-// document.addEventListener('DOMContentLoaded', async () => { ... }); এর ভেতরে যোগ করলে ভালো হয়
 // ====================================================================
 async function initializeGlobalCounter() {
     try {
@@ -12133,12 +12131,12 @@ async function initializeGlobalCounter() {
         // এই গ্লোবাল ভেরিয়েবলগুলো আপনার এনভায়রনমেন্ট থেকে আসবে
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'bangla-toolbox-global-visits';
         
-        // পরিবর্তিত: __firebase_config এর পরিবর্তে userFirebaseConfig ব্যবহার করা হচ্ছে
+        // __firebase_config অথবা userFirebaseConfig থেকে কনফিগারেশন নেওয়া হচ্ছে
         const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : window.userFirebaseConfig;
 
-        // Firebase কনফিগ না থাকলে বা সেট করা না হলে গ্লোবাল কাউন্টার কার্ডগুলো দেখানো হবে না
+        // Firebase কনফিগ না থাকলে কাউন্টার কার্ডগুলো দেখানো হবে না
         if (!firebaseConfig || !firebaseConfig.apiKey || firebaseConfig.apiKey === "YOUR_API_KEY") {
-            console.error("Firebase কনফিগ পাওয়া যায়নি বা সেট করা হয়নি। গ্লোবাল কাউন্টার কাজ করবে না।");
+            console.error("Firebase কনফিগ পাওয়া যায়নি। গ্লোবাল কাউন্টার কাজ করবে না।");
             const todayCard = document.getElementById('all-today-visits')?.parentElement;
             const totalCard = document.getElementById('all-total-visits')?.parentElement;
             if(todayCard) todayCard.style.display = 'none';
@@ -12229,6 +12227,9 @@ async function initializeGlobalCounter() {
         if (totalCard) totalCard.style.display = 'none';
     }
 }
+
+// ফাংশনটি কল করার জন্য DOMContentLoaded ইভেন্ট ব্যবহার করা হচ্ছে
+document.addEventListener('DOMContentLoaded', initializeGlobalCounter);
 // ====================================================================
 // END: GLOBAL VISITOR COUNTER (FIREBASE)
 // ====================================================================
