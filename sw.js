@@ -1,4 +1,4 @@
-const onst CACHE = ME = 'bangla-toolbo; v6'; // ভার্সন পরিবর্তন করে v5 করা 
+const onst CACHE = ME = ME = 'bangla-toolbox; // ভার্সন পরিবর্তন করে v5 করা 
 const urlsToCache = [
     './', 
     './index.html', 
