@@ -1,8 +1,8 @@
 
-const CACHE_NAME = 'bangla-toolbox-v9'; // ভার্সন পরিবর্তন করা হয়েছে যাতে নতুন ফাইল আপডেট নেয়
+const CACHE_NAME = 'bangla-toolbox-v10'; // ভার্সন পরিবর্তন করা হয়েছে যাতে নতুন ফাইল আপডেট নেয়
 const urlsToCache = [
     
-    './index.html', // নিশ্চিত করুন আপনার মেইন ফাইলের নাম index.html
+
 ];
 
 // ১. ইনস্টল ইভেন্ট
