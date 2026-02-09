@@ -7161,6 +7161,52 @@ body.sidebar-open #sidebarOverlay {
 
 /* --- end Live Cricket Card Styles --- */
 
+/* ========================================= */
+/* START: সাইডবার ভিডিও প্লেয়ার স্টাইল (নতুন) */
+/* ========================================= */
+#rightSideVideoContainer {
+    position: fixed;
+    top: 100px; /* উপর থেকে দূরত্ব */
+    right: 20px; /* ডান থেকে দূরত্ব */
+    width: 320px; /* প্লেয়ারের প্রস্থ */
+    aspect-ratio: 16/9; /* ইউটিউব ভিডিওর অনুপাত */
+    z-index: 40; /* সাইডবারের নিচে কিন্তু ব্যাকগ্রাউন্ডের উপরে */
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+    border: 2px solid rgba(255, 255, 255, 0.5);
+    background: black;
+    transition: all 0.3s ease;
+}
+
+/* ছোট স্ক্রিনে (মোবাইল) ভিডিওটি নিচে ফিক্সড থাকবে অথবা হাইড করা যাবে */
+@media (max-width: 1100px) {
+    #rightSideVideoContainer {
+        bottom: 20px;
+        top: auto;
+        right: 20px;
+        width: 250px;
+    }
+}
+
+/* ভিডিও প্লেয়ার ড্র্যাগ করার জন্য হ্যান্ডেল (ঐচ্ছিক) */
+.video-drag-handle {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 20px;
+    background: rgba(0,0,0,0.6);
+    cursor: move;
+    z-index: 20;
+    display: flex;
+    justify-content: flex-end;
+    padding-right: 5px;
+}
+/* ========================================= */
+/* END: সাইডবার ভিডিও প্লেয়ার স্টাইল */
+/* ========================================= */
+
 
 <!-- এখান থেকে ওপরে নতুন ট্যাবের সি এস এস কোড লিখতে হবে বা বসাতে হয় বা বসাতে হবে -->
     </style>
@@ -10660,6 +10706,25 @@ body.sidebar-open #sidebarOverlay {
     <div class="settings-page-container">
         <h3 class="text-xl font-bold text-gray-700 mb-6 dark:text-gray-200">সেটিংস সমূহ</h3> 
 
+<!-- ইউটিউব লাইভ/ভিডিও সেটিংস (নতুন) -->
+        <div class="setting-item mb-4">
+            <div class="w-full">
+                <label for="ytVideoUrlInput" class="font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2">
+                    📺 ইউটিউব ভিডিও / লাইভ সেটআপ
+                </label>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mb-2">হোমপেজে ভিডিও দেখতে ইউটিউব ভিডিওর লিংক পেস্ট করে 'সেভ করুন' চাপুন। লিংক মুছে দিলে প্লেয়ারটি অদৃশ্য হয়ে যাবে।</p>
+                <div class="flex gap-2">
+                    <input type="text" id="ytVideoUrlInput" placeholder="https://youtu.be/..." class="flex-grow p-2 border rounded-lg dark:bg-gray-600 dark:border-gray-500 dark:text-white focus:ring-2 focus:ring-red-500 text-sm">
+                    <button id="saveYtVideoBtn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors shadow-sm">
+                        সেভ করুন
+                    </button>
+                    <button id="clearYtVideoBtn" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors shadow-sm">
+                        মুছুন
+                    </button>
+                </div>
+            </div>
+        </div>
+		
 <!-- লাইভ ক্রিকেট লিংক বক্স (আপডেটেড) -->
         <div class="setting-item mb-4">
             <div class="w-full">
@@ -26324,7 +26389,237 @@ document.addEventListener('DOMContentLoaded', () => {
 // END: LIVE CRICKET TICKER SCRIPT (UPDATED & REFINED)
 // ====================================================================
 
+// ====================================================================
+// START: FEATURED YOUTUBE VIDEO SCRIPT (UPDATED: Native PiP & Local Fix)
+// ====================================================================
+function initFeaturedVideoSystem() {
+    const videoContainer = document.getElementById('rightSideVideoContainer');
+    const videoFrame = document.getElementById('featuredVideoFrame');
+    const closeVideoBtn = document.getElementById('closeVideoBtn');
+    
+    // সেটিংস এলিমেন্ট
+    const urlInput = document.getElementById('ytVideoUrlInput');
+    const saveBtn = document.getElementById('saveYtVideoBtn');
+    const clearBtn = document.getElementById('clearYtVideoBtn');
 
+    // সার্ভার কনফিগারেশন তালিকা (Piped ও Invidious বাদ দেওয়া হয়েছে)
+    const servers = [
+        { id: 'youtube', name: 'Server: YouTube (Official)', url: (id) => `https://www.youtube.com/embed/${id}?autoplay=1&mute=1&rel=0&enablejsapi=1&origin=${window.location.origin}` },
+        { id: 'nocookie', name: 'Server: YT No-Cookie', url: (id) => `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&mute=1&rel=0` }
+    ];
+
+    // বর্তমান সার্ভার ইনডেক্স (ডিফল্ট ০ অর্থাৎ YouTube Official)
+    let currentServerIndex = parseInt(localStorage.getItem('ytPlayerServerIndex') || '0');
+    // যদি ইনডেক্স সীমার বাইরে থাকে তবে রিসেট করে ০ করা হবে
+    if (currentServerIndex < 0 || currentServerIndex >= servers.length) {
+        currentServerIndex = 0;
+        localStorage.setItem('ytPlayerServerIndex', '0');
+    }
+
+    // ভিডিও আইডি বের করার ফাংশন
+    function getYoutubeId(url) {
+        if (!url) return null;
+        const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=|shorts\/)([^#&?]*).*/;
+        const match = url.match(regExp);
+        return (match && match[2].length === 11) ? match[2] : null;
+    }
+
+    // ড্র্যাগ হ্যান্ডেল লজিক
+    function makeDraggable(element) {
+        const handle = element.querySelector('.video-drag-handle');
+        if (!handle) return;
+
+        let isDragging = false;
+        let startX, startY, initialLeft, initialTop;
+
+        handle.addEventListener('mousedown', startDrag);
+        handle.addEventListener('touchstart', startDrag, {passive: false});
+
+        function startDrag(e) {
+            if (e.target.tagName === 'BUTTON' || e.target.closest('button')) return;
+            e.preventDefault();
+            isDragging = true;
+            const clientX = e.type === 'mousedown' ? e.clientX : e.touches[0].clientX;
+            const clientY = e.type === 'mousedown' ? e.clientY : e.touches[0].clientY;
+            startX = clientX;
+            startY = clientY;
+            const rect = element.getBoundingClientRect();
+            element.style.right = 'auto';
+            element.style.bottom = 'auto';
+            element.style.left = rect.left + 'px';
+            element.style.top = rect.top + 'px';
+            element.style.width = rect.width + 'px';
+            initialLeft = rect.left;
+            initialTop = rect.top;
+            document.addEventListener('mousemove', drag);
+            document.addEventListener('mouseup', stopDrag);
+            document.addEventListener('touchmove', drag, {passive: false});
+            document.addEventListener('touchend', stopDrag);
+        }
+
+        function drag(e) {
+            if (!isDragging) return;
+            e.preventDefault();
+            const clientX = e.type === 'mousemove' ? e.clientX : e.touches[0].clientX;
+            const clientY = e.type === 'mousemove' ? e.clientY : e.touches[0].clientY;
+            const dx = clientX - startX;
+            const dy = clientY - startY;
+            element.style.left = `${initialLeft + dx}px`;
+            element.style.top = `${initialTop + dy}px`;
+        }
+
+        function stopDrag() {
+            isDragging = false;
+            document.removeEventListener('mousemove', drag);
+            document.removeEventListener('mouseup', stopDrag);
+            document.removeEventListener('touchmove', drag);
+            document.removeEventListener('touchend', stopDrag);
+        }
+    }
+
+    // কন্ট্রোল বাটন ইনজেক্ট করা (সার্ভার সুইচ ও PiP)
+    function injectControls() {
+        const handle = videoContainer.querySelector('.video-drag-handle');
+        if (handle && !document.getElementById('serverSwitchBtn')) {
+            
+            // ১. সার্ভার সুইচ বাটন
+            const switchBtn = document.createElement('button');
+            switchBtn.id = 'serverSwitchBtn';
+            switchBtn.title = 'ভিডিও না চললে সার্ভার পরিবর্তন করুন';
+            switchBtn.onclick = (e) => {
+                e.stopPropagation();
+                currentServerIndex = (currentServerIndex + 1) % servers.length;
+                localStorage.setItem('ytPlayerServerIndex', currentServerIndex);
+                updateSwitchButtonStyle(switchBtn);
+                loadVideoPlayer(); 
+                showCustomAlert(`সার্ভার: ${servers[currentServerIndex].name.replace('Server: ', '')}`);
+            };
+
+            // ২. PiP Mode বাটন (Chrome Document PiP)
+            const pipBtn = document.createElement('button');
+            pipBtn.id = 'videoPipBtn';
+            pipBtn.className = 'text-[10px] font-bold bg-green-600 text-white px-2 py-0.5 rounded mr-2 hover:bg-green-700 border border-white/20';
+            pipBtn.innerHTML = 'PiP Mode';
+            pipBtn.title = 'পিপ মোড (Always on Top)';
+            
+            pipBtn.onclick = async (e) => {
+                e.stopPropagation();
+
+                if ('documentPictureInPicture' in window) {
+                    try {
+                        const iframe = document.getElementById('featuredVideoFrame');
+                        const container = document.getElementById('rightSideVideoContainer');
+                        
+                        const pipWindow = await window.documentPictureInPicture.requestWindow({
+                            width: 480,
+                            height: 270
+                        });
+
+                        // স্টাইল ও আইফ্রেম মুভ করা
+                        pipWindow.document.body.style.margin = '0';
+                        pipWindow.document.body.style.background = '#000';
+                        pipWindow.document.body.append(iframe);
+                        iframe.style.width = '100%';
+                        iframe.style.height = '100%';
+
+                        // প্লেসহোল্ডার
+                        const placeholder = document.createElement('div');
+                        placeholder.id = 'pip-placeholder';
+                        placeholder.className = 'w-full h-full flex items-center justify-center text-white bg-black/70 text-xs text-center p-4';
+                        placeholder.innerHTML = 'ভিডিওটি PiP মোডে চলছে...';
+                        container.appendChild(placeholder);
+                        handle.style.visibility = 'hidden';
+
+                        pipWindow.addEventListener("pagehide", () => {
+                            const ph = document.getElementById('pip-placeholder');
+                            if(ph) ph.remove();
+                            handle.style.visibility = 'visible';
+                            container.appendChild(iframe);
+                        });
+                    } catch (err) {
+                        console.error(err);
+                        showCustomAlert('PiP চালু করা যায়নি।');
+                    }
+                } else {
+                    // ফলব্যাক: সাধারণ পপআপ
+                    const linkToOpen = videoFrame.src;
+                    window.open(linkToOpen, 'YTPlayer', 'width=480,height=270,top=100,left=100');
+                    showCustomAlert('পপআপ উইন্ডোতে খোলা হয়েছে।');
+                }
+            };
+            
+            handle.insertBefore(pipBtn, closeVideoBtn);
+            handle.insertBefore(switchBtn, pipBtn);
+            updateSwitchButtonStyle(switchBtn);
+        }
+        makeDraggable(videoContainer);
+    }
+
+    function updateSwitchButtonStyle(btn) {
+        if (!btn) return;
+        const server = servers[currentServerIndex];
+        btn.textContent = server.name.replace('Server: ', '');
+        // ইউটিউব বা নো-কুকি হলে লাল, অন্যথায় নীল (এখানে শুধু লালই থাকবে কারণ অন্যগুলো বাদ)
+        const isYT = server.id.includes('youtube') || server.id === 'nocookie';
+        btn.className = isYT 
+            ? 'text-[10px] font-bold bg-red-600 text-white px-2 py-0.5 rounded mr-2 hover:bg-red-700 border border-white/20' 
+            : 'text-[10px] font-bold bg-indigo-600 text-white px-2 py-0.5 rounded mr-2 hover:bg-indigo-700 border border-white/20';
+    }
+
+    function loadVideoPlayer() {
+        const savedUrl = localStorage.getItem('featuredVideoLink');
+        if (savedUrl) {
+            const videoId = getYoutubeId(savedUrl);
+            if (videoId) {
+                if (urlInput) urlInput.value = savedUrl;
+                videoFrame.src = servers[currentServerIndex].url(videoId);
+                videoContainer.classList.remove('hidden');
+                injectControls();
+            }
+        } else {
+            videoContainer.classList.add('hidden');
+            videoFrame.src = "";
+        }
+    }
+
+    if (closeVideoBtn) {
+        closeVideoBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            videoContainer.classList.add('hidden');
+            videoFrame.src = ""; 
+            showCustomAlert('প্লেয়ার বন্ধ করা হয়েছে।');
+        });
+    }
+
+    if (saveBtn) {
+        saveBtn.addEventListener('click', () => {
+            const url = urlInput.value.trim();
+            if (getYoutubeId(url)) {
+                localStorage.setItem('featuredVideoLink', url);
+                showCustomAlert('লিংক সেভ হয়েছে!');
+                loadVideoPlayer();
+            } else {
+                showCustomAlert('সঠিক ইউটিউব লিংক দিন।');
+            }
+        });
+    }
+
+    if (clearBtn) {
+        clearBtn.addEventListener('click', () => {
+            if(urlInput) urlInput.value = '';
+            localStorage.removeItem('featuredVideoLink');
+            videoContainer.classList.add('hidden');
+            videoFrame.src = "";
+        });
+    }
+
+    loadVideoPlayer();
+}
+
+document.addEventListener('DOMContentLoaded', initFeaturedVideoSystem);
+// ====================================================================
+// END: FEATURED YOUTUBE VIDEO SCRIPT
+// ====================================================================
     
 // ====================================================================
 // START: আরও সেটিংস (More Settings) TAB SCRIPT (Updated)
@@ -30636,6 +30931,33 @@ document.addEventListener('DOMContentLoaded', () => {
 <!-- END: SIDEBAR SCRIPT-->
 <!-- ====================================================================-->
 
+<!-- ======================================================== -->
+<!-- START: ফ্লোটিং সাইডবার ভিডিও প্লেয়ার (ডান পাশে) -->
+<!-- ======================================================== -->
+<div id="rightSideVideoContainer" class="hidden">
+    <!-- ড্র্যাগ বা মুভ করার বার এবং ক্লোজ বাটন -->
+    <div class="video-drag-handle group">
+        <button id="closeVideoBtn" class="text-white hover:text-red-500 transition-colors" title="ভিডিও বন্ধ করুন">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+        </button>
+    </div>
+    
+    <!-- ইউটিউব আইফ্রেম -->
+    <iframe id="featuredVideoFrame" 
+            class="w-full h-full absolute top-0 left-0" 
+            src="" 
+            title="YouTube video player" 
+            frameborder="0" 
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+            referrerpolicy="strict-origin-when-cross-origin" 
+            allowfullscreen>
+    </iframe>
+</div>
+<!-- ======================================================== -->
+<!-- END: ফ্লোটিং সাইডবার ভিডিও প্লেয়ার -->
+<!-- ======================================================== -->
 
 </body>
 </html>
