@@ -12770,9 +12770,9 @@ body.sidebar-open #sidebarOverlay {
                 <option value="ur-IN">Urdu (India)</option>
                 <option value="ru-RU">Russian (Russia)</option>
                 <option value="zh-CN">Chinese (Mandarin)</option>
-                <option value="custom">কাস্টম ভাষা (Custom Code)</option>
+                <option value="custom">অন্যান্য ভাষা (Custom Code)</option>
             </select>
-            <input type="text" id="liveMicCustomCode" placeholder="যেমন: fr-FR" class="hidden w-32 p-2 border rounded-lg dark:bg-gray-700 dark:border-gray-500 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 text-center">
+            <input type="text" id="liveMicCustomCode" placeholder="যেমন: en-US" class="hidden w-32 p-2 border rounded-lg dark:bg-gray-700 dark:border-gray-500 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 text-center">
         </div>
 
         <!-- +++ লাইভ মাইক্রোফোন বাটন +++ -->
@@ -33361,7 +33361,6 @@ function initializePcVoiceClient() {
             return;
         }
 
-        // no-cors মোড ব্যবহার করা হলো যাতে ব্রাউজার ব্লক না করে
         fetch(url, { 
             method: 'POST', 
             mode: 'no-cors',
@@ -33377,51 +33376,37 @@ function initializePcVoiceClient() {
     }
 
     // ==========================================
-    // লাইভ মাইক্রোফোন লজিক
+    // লাইভ মাইক্রোফোন লজিক (Updated: Single Breath)
     // ==========================================
-    let isLiveMicRunning = false;
     let liveRec = null;
 
     if (liveMicBtn && SpeechRec) {
         liveRec = new SpeechRec();
-        liveRec.continuous = true; 
-        liveRec.interimResults = true; 
+        
+        // +++ কথা থামালেই অটোমেটিক বন্ধ হয়ে যাবে (No loop) +++
+        liveRec.continuous = false; 
+        liveRec.interimResults = false; // শুধু ফাইনাল রেজাল্টটাই দেখাবে, যাতে রিপিট না হয়
         
         liveRec.onstart = () => {
-            isLiveMicRunning = true;
             liveMicBtn.classList.replace('bg-red-500', 'bg-green-500');
             liveMicBtn.classList.replace('hover:bg-red-600', 'hover:bg-green-600');
             liveMicBtn.classList.add('animate-pulse');
-            if(liveMicStatus) liveMicStatus.innerHTML = "<span class='text-green-500'>🔴 শুনছি... (কথা থামালেই পিসিতে টাইপ হবে)</span>";
+            if(liveMicStatus) liveMicStatus.innerHTML = "<span class='text-green-500'>🔴 শুনছি... (কথা থামালেই পিসিতে যাবে)</span>";
             if(liveMicLangCombo) liveMicLangCombo.disabled = true; 
             if(liveMicCustomCode) liveMicCustomCode.disabled = true;
         };
 
         liveRec.onresult = (e) => {
-            let interimTranscript = '';
-            let finalTranscript = '';
+            const finalTranscript = e.results[0][0].transcript.trim();
 
-            for (let i = e.resultIndex; i < e.results.length; ++i) {
-                if (e.results[i].isFinal) {
-                    finalTranscript += e.results[i][0].transcript;
-                } else {
-                    interimTranscript += e.results[i][0].transcript;
-                }
-            }
-
-            if (interimTranscript && liveMicStatus) {
-                liveMicStatus.innerHTML = `<span class='text-blue-500'>${interimTranscript}</span>`;
-            }
-
-            if (finalTranscript.trim()) {
+            if (finalTranscript) {
                 if (autoSendCheck && autoSendCheck.checked) {
-                    sendDataToPCFetch(finalTranscript.trim(), true);
-                    if(textBox) textBox.value = finalTranscript.trim() + " (Sent ✓)";
+                    sendDataToPCFetch(finalTranscript, true);
+                    if(textBox) textBox.value = finalTranscript + " (Sent ✓)";
                 } else {
-                    if(textBox) textBox.value += (textBox.value ? ' ' : '') + finalTranscript.trim();
+                    if(textBox) textBox.value += (textBox.value ? ' ' : '') + finalTranscript;
                 }
                 saveState();
-                if(liveMicStatus) liveMicStatus.innerHTML = "<span class='text-green-500'>🔴 শুনছি...</span>";
             }
         };
 
@@ -33429,21 +33414,17 @@ function initializePcVoiceClient() {
             console.error(e.error);
             if(e.error === 'not-allowed') {
                 showCustomAlert('মাইক্রোফোনের পারমিশন নেই! ব্রাউজারের সেটিং চেক করুন।');
-                isLiveMicRunning = false;
             }
         };
 
         liveRec.onend = () => {
-            if (isLiveMicRunning) {
-                try { liveRec.start(); } catch(err) {}
-            } else {
-                liveMicBtn.classList.replace('bg-green-500', 'bg-red-500');
-                liveMicBtn.classList.replace('hover:bg-green-600', 'hover:bg-red-600');
-                liveMicBtn.classList.remove('animate-pulse');
-                if(liveMicStatus) liveMicStatus.innerHTML = "মাইক আইকনে ক্লিক করে কথা বলা শুরু করুন...";
-                if(liveMicLangCombo) liveMicLangCombo.disabled = false;
-                if(liveMicCustomCode) liveMicCustomCode.disabled = false;
-            }
+            // কথা থামালে বা রেজাল্ট পাওয়ার পর অটোমেটিক লাল বাটনে ফিরে আসবে
+            liveMicBtn.classList.replace('bg-green-500', 'bg-red-500');
+            liveMicBtn.classList.replace('hover:bg-green-600', 'hover:bg-red-600');
+            liveMicBtn.classList.remove('animate-pulse');
+            if(liveMicStatus) liveMicStatus.innerHTML = "মাইক আইকনে ক্লিক করে কথা বলা শুরু করুন...";
+            if(liveMicLangCombo) liveMicLangCombo.disabled = false;
+            if(liveMicCustomCode) liveMicCustomCode.disabled = false;
         };
 
         liveMicBtn.addEventListener('click', () => {
@@ -33457,27 +33438,23 @@ function initializePcVoiceClient() {
                 return;
             }
 
-            if (isLiveMicRunning) {
-                isLiveMicRunning = false;
-                liveRec.stop();
-            } else {
-                let selectedLang = liveMicLangCombo ? liveMicLangCombo.value : 'bn-BD';
-                if (selectedLang === 'custom' && liveMicCustomCode) {
-                    const cCode = liveMicCustomCode.value.trim();
-                    const rx = /^[a-z]{2,3}-[A-Z]{2}$/;
-                    if (rx.test(cCode)) {
-                        selectedLang = cCode;
-                    } else {
-                        showCustomAlert('ভুল কোড! ডিফল্ট বাংলা ভাষায় সেট করা হলো। (সঠিক ফরম্যাট: en-US, fr-FR)');
-                        selectedLang = 'bn-BD';
-                        liveMicLangCombo.value = 'bn-BD';
-                        liveMicCustomCode.classList.add('hidden');
-                    }
+            // বাটনে ক্লিক করলে ভাষা সেট করে একবারের জন্য মাইক চালু করবে
+            let selectedLang = liveMicLangCombo ? liveMicLangCombo.value : 'bn-BD';
+            if (selectedLang === 'custom' && liveMicCustomCode) {
+                const cCode = liveMicCustomCode.value.trim();
+                const rx = /^[a-z]{2,3}-[A-Z]{2}$/;
+                if (rx.test(cCode)) {
+                    selectedLang = cCode;
+                } else {
+                    showCustomAlert('ভুল কোড! ডিফল্ট বাংলা ভাষায় সেট করা হলো। (সঠিক ফরম্যাট: en-US, bn-BD)');
+                    selectedLang = 'bn-BD';
+                    liveMicLangCombo.value = 'bn-BD';
+                    liveMicCustomCode.classList.add('hidden');
                 }
-                
-                liveRec.lang = selectedLang;
-                try { liveRec.start(); } catch(err) {}
             }
+            
+            liveRec.lang = selectedLang;
+            try { liveRec.start(); } catch(err) {}
         });
     }
 
