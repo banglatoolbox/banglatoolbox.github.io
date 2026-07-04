@@ -31937,7 +31937,8 @@ function initializeKeyboardLayoutManager() {
     const layoutOptions = document.querySelectorAll('.layout-option');
     const indicator = document.getElementById('currentLayoutIndicator');
     
-    let currentLayout = 'english';
+let currentLayout = 'english';
+    let lastNonEnglishLayout = 'phonetic'; // ডিফল্টভাবে ফনেটিক বা আপনার পছন্দেরটি রাখতে পারেন
     let typeBuffer = ''; // নতুন: বাফার টাইপিং ট্র্যাক করার জন্য
     let activePreKar = ''; // নতুন: প্রি-কার ট্র্যাক করার জন্য
     let karJumpState = 0; // নতুন: স্টেট ম্যানেজমেন্টের জন্য
@@ -32329,13 +32330,18 @@ const indVowMap = {
             const layoutNames = {
                 'english': 'English',
                 'bijoy_unicode': 'বিজয় ইউনিকোড',
-                'bijoy_ansi': 'বিজয় আনসি'
+                'bijoy_ansi': 'বিজয় আনসি',
+				'phonetic': 'বাংলা ফনেটিক (Avro)'
             };
             showCustomAlert(`কীবোর্ড লেআউট: ${layoutNames[currentLayout]}`);
         }
     }
 
-    function setKeyboardLayout(layout, notify = false) {
+function setKeyboardLayout(layout, notify = false) {
+        // যদি সিলেক্ট করা লেআউটটি ইংরেজি না হয়, তবে সেটি মনে রাখুন
+        if (layout !== 'english') {
+            lastNonEnglishLayout = layout;
+        }
         currentLayout = layout;
         typeBuffer = ''; // লেআউট চেঞ্জ হলে বাফার ক্লিয়ার
         activePreKar = '';
@@ -32406,17 +32412,42 @@ const indVowMap = {
     }
 
 
-    document.addEventListener('keydown', function(e) {
+document.addEventListener('keydown', function(e) {
         const target = e.target;
         const isEditable = target.tagName === 'TEXTAREA' || target.tagName === 'INPUT' || target.isContentEditable;
         
+        // --- নতুন: ডিরেক্ট লেআউট শর্টকাট (Ctrl + 1, 2, 3, 4) ---
+        if (e.ctrlKey && !e.altKey && !e.shiftKey) {
+            if (e.key === '1') {
+                e.preventDefault();
+                setKeyboardLayout('bijoy_unicode', true);
+                return;
+            } else if (e.key === '2') {
+                e.preventDefault();
+                setKeyboardLayout('english', true);
+                return;
+            } else if (e.key === '3') {
+                e.preventDefault();
+                setKeyboardLayout('bijoy_ansi', true);
+                return;
+            } else if (e.key === '4') {
+                e.preventDefault();
+                setKeyboardLayout('phonetic', true);
+                return;
+            }
+        }
+        // -----------------------------------------------------
+
         const isToggleShortcut = e.ctrlKey && (e.code === 'Space' || e.key.toLowerCase() === 'k');
         
         if (isToggleShortcut) {
             e.preventDefault();
-            const layouts = ['english', 'bijoy_unicode', 'bijoy_ansi'];
-            const nextLayout = layouts[(layouts.indexOf(currentLayout) + 1) % layouts.length];
-            setKeyboardLayout(nextLayout, true);
+            // যদি বর্তমানে ইংরেজি থাকে, তবে সর্বশেষ ব্যবহৃত বাংলা লেআউটে যাবে, অন্যথায় ইংরেজিতে ফিরবে
+            if (currentLayout === 'english') {
+                setKeyboardLayout(lastNonEnglishLayout, true);
+            } else {
+                setKeyboardLayout('english', true);
+            }
             return;
         }
 
