@@ -12708,7 +12708,7 @@ body.sidebar-open #sidebarOverlay {
                     </button>
                 </div>
             </div>
-            <p class="text-[11px] text-gray-500 dark:text-gray-400 mt-2">একবার আইপি বসালে ভয়েস টাইপিং এবং ফাইল ট্রান্সফার উভয়েই সিঙ্ক হয়ে কাজ করবে। (পিসি অ্যাপ চালু থাকতে হবে)</p>
+            <p class="text-[11px] text-gray-500 dark:text-gray-400 mt-2">একবার আইপি বসালে ভয়েস টাইপিং এবং ফাইল ট্রান্সফার উভয়েই সিঙ্ক হয়ে কাজ করবে। (পিসি অ্যাপ (Kotha Keyboard) চালু থাকতে হবে)</p>
         </div>
 
         <!-- Mixed Content Warning -->
@@ -31308,17 +31308,22 @@ recognition.onresult = function(event) {
         const transcript = event.results[0][0].transcript.trim();
         console.log("Voice Command/Text Received:", transcript);
 
-        // +++ ম্যাজিক ১: যদি পিসি কানেক্টেড থাকে, তবে সরাসরি পিসিতে পাঠিয়ে দাও +++
-        if (window.isPcVoiceConnected && window.sendVoiceDataToPC) {
-            window.sendVoiceDataToPC(transcript);
-            showCustomAlert('পিসিতে টাইপ করা হয়েছে: ' + transcript);
-            
-            // যদি ইউজার PC Voice Client ট্যাবে থাকে, তবে সেখানকার টেক্সটবক্সেও দেখাবে
+        // +++ পিসিতে কানেক্ট থাকলে পিসি ভয়েস ট্যাবের বড় মাইকটার মতো কাজ করবে +++
+        if (window.isPcVoiceConnected) {
+            const autoSendCheck = document.getElementById('pcVoiceAutoSend');
             const pcTextBox = document.getElementById('pcVoiceTextBox');
-            if (pcTextBox && document.getElementById('pcVoiceClientContent').classList.contains('active')) {
-                pcTextBox.value += (pcTextBox.value ? ' ' : '') + transcript + " (Sent ✓)";
+            
+            if (autoSendCheck && autoSendCheck.checked) {
+                // পিসিতে ডাটা পাঠানো
+                if (window.sendVoiceDataToPC) window.sendVoiceDataToPC(transcript);
+                showCustomAlert('পিসিতে পাঠানো হয়েছে: ' + transcript);
+                // টেক্সটবক্সে আপডেট করা
+                if (pcTextBox) pcTextBox.value += (pcTextBox.value ? ' ' : '') + transcript + " (Sent ✓)";
+            } else {
+                showCustomAlert('টেক্সট বক্সে যোগ করা হয়েছে (অটো সেন্ড বন্ধ): ' + transcript);
+                if (pcTextBox) pcTextBox.value += (pcTextBox.value ? ' ' : '') + transcript;
             }
-            return; // পিসিতে পাঠালে লোকাল অ্যাপে আর কিছু করবে না
+            return; // পিসির কাজ শেষ, লোকাল টুলবক্সে আর টাইপ বা কমান্ড হবে না
         }
         // +++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -31331,7 +31336,6 @@ recognition.onresult = function(event) {
         );
 
         if (isEditable) {
-            // যদি কোনো ইনপুট ফিল্ড সিলেক্ট করা থাকে, সেখানে টেক্সট ইনসার্ট হবে
             if (activeEl.isContentEditable) {
                 document.execCommand('insertText', false, transcript + ' ');
             } else {
@@ -31348,7 +31352,6 @@ recognition.onresult = function(event) {
                 activeEl.dispatchEvent(new Event('input', { bubbles: true }));
             }
         } else {
-            // যদি কোনো ইনপুট ফিল্ড সিলেক্ট করা না থাকে, তবে কমান্ড হিসেবে প্রসেস হবে
             processVoiceCommand(transcript.toLowerCase());
         }
     };
@@ -31369,17 +31372,32 @@ recognition.onresult = function(event) {
 
 voiceBtn.addEventListener('click', () => {
             try {
-                // +++ ম্যাজিক ২: বর্তমান লেআউট অনুযায়ী ভয়েসের ভাষা সেট করা +++
-                if (typeof currentLayout !== 'undefined') {
-                    if (currentLayout === 'english') {
-                        recognition.lang = 'en-US';
-                    } else if (currentLayout === 'arabic_phonetic' || currentLayout === 'arabic_101') {
-                        recognition.lang = 'ar-SA';
-                    } else {
-                        recognition.lang = 'bn-BD'; // বাংলা (ইউনিকোড, ফনেটিক, আন্সি)
+                // +++ পিসিতে কানেক্ট থাকলে 'পিসি ভয়েস টাইপিং' ট্যাবের ড্রপডাউন থেকে ভাষা নেবে +++
+                if (window.isPcVoiceConnected) {
+                    const liveMicLangCombo = document.getElementById('liveMicLangCombo');
+                    const liveMicCustomCode = document.getElementById('liveMicCustomCode');
+                    
+                    let selectedLang = liveMicLangCombo ? liveMicLangCombo.value : 'bn-BD';
+                    if (selectedLang === 'custom' && liveMicCustomCode) {
+                        const cCode = liveMicCustomCode.value.trim();
+                        const rx = /^[a-z]{2,3}-[A-Z]{2}$/;
+                        selectedLang = rx.test(cCode) ? cCode : 'bn-BD';
                     }
-                } else {
-                    recognition.lang = 'bn-BD'; // ফলব্যাক
+                    recognition.lang = selectedLang;
+                } 
+                // +++ কানেক্ট না থাকলে টপবারের কীবোর্ড লেআউটের ভাষা নেবে +++
+                else {
+                    if (typeof currentLayout !== 'undefined') {
+                        if (currentLayout === 'english') {
+                            recognition.lang = 'en-US';
+                        } else if (currentLayout === 'arabic_phonetic' || currentLayout === 'arabic_101') {
+                            recognition.lang = 'ar-SA';
+                        } else {
+                            recognition.lang = 'bn-BD'; // বাংলা (ইউনিকোড, ফনেটিক, আন্সি)
+                        }
+                    } else {
+                        recognition.lang = 'bn-BD'; // ফলব্যাক
+                    }
                 }
                 // +++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -34070,16 +34088,22 @@ function initializePcVoiceClient() {
             connectBtn.innerHTML = `<svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> অপেক্ষা করুন...`;
             connectBtn.className = "bg-indigo-400 text-white font-bold py-2 px-4 rounded-lg shadow flex items-center justify-center gap-2 min-w-[110px]";
 
+// ১০ সেকেন্ডের টাইমআউট কন্ট্রোলার
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 10000);
+
             try {
                 const res = await fetch(`${baseUrl}/type`, { 
                     method: 'POST', 
-                    body: ' ' 
+                    body: ' ',
+                    signal: controller.signal // টাইমআউট সিগন্যাল যুক্ত করা হলো
                 });
+                
+                clearTimeout(timeoutId); // সফল হলে টাইমার ক্লিয়ার
 
-if (res.ok || res.status === 200) {
+                if (res.ok || res.status === 200) {
                     isDisconnected = false;
-                    window.isPcVoiceConnected = true;
-					
+                    window.isPcVoiceConnected = true; // +++ গ্লোবাল স্ট্যাটাস আপডেট +++
                     connectBtn.className = "bg-green-500 text-white font-bold py-2 px-4 rounded-lg shadow transition-colors flex items-center justify-center gap-1 min-w-[110px]";
                     connectBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" /></svg> কানেক্টেড`;
                     if(warningBox) warningBox.classList.add('hidden');
@@ -34091,11 +34115,15 @@ if (res.ok || res.status === 200) {
                     throw new Error('Connection failed');
                 }
             } catch (err) {
+                clearTimeout(timeoutId); // এরর হলেও টাইমার ক্লিয়ার
                 console.error("Connection Error:", err);
                 connectBtn.className = "bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg shadow transition-colors flex items-center justify-center gap-1 min-w-[110px]";
                 connectBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" /></svg> ব্যর্থ`;
                 
-                if (err.message === 'Rejected by PC user') {
+                if (err.name === 'AbortError') {
+                    if(warningBox) warningBox.classList.remove('hidden');
+                    showCustomAlert('কানেকশন টাইমআউট! পিসি রেসপন্স করেনি (১০ সেকেন্ড)। আইপি ঠিক আছে কিনা চেক করুন।');
+                } else if (err.message === 'Rejected by PC user') {
                     showCustomAlert('পিসি থেকে কানেকশন রিকোয়েস্ট বাতিল করা হয়েছে!');
                 } else {
                     if(warningBox) warningBox.classList.remove('hidden');
@@ -34211,14 +34239,16 @@ if (res.ok || res.status === 200) {
             if(liveMicCustomCode) liveMicCustomCode.disabled = true;
         };
 
-        liveRec.onresult = (e) => {
+liveRec.onresult = (e) => {
             const finalTranscript = e.results[0][0].transcript.trim();
 
             if (finalTranscript) {
-                if (autoSendCheck && autoSendCheck.checked) {
+                // যদি পিসিতে কানেক্টেড থাকে এবং অটো সেন্ড অন থাকে
+                if (!isDisconnected && autoSendCheck && autoSendCheck.checked) {
                     sendDataToPCFetch(finalTranscript, true);
-                    if(textBox) textBox.value = finalTranscript + " (Sent ✓)";
+                    if(textBox) textBox.value += (textBox.value ? ' ' : '') + finalTranscript + " (Sent ✓)";
                 } else {
+                    // কানেক্টেড না থাকলে বা অটো সেন্ড অফ থাকলে শুধু বক্সে যোগ হবে
                     if(textBox) textBox.value += (textBox.value ? ' ' : '') + finalTranscript;
                 }
                 saveState();
@@ -34242,12 +34272,7 @@ if (res.ok || res.status === 200) {
             if(liveMicCustomCode) liveMicCustomCode.disabled = false;
         };
 
-        liveMicBtn.addEventListener('click', () => {
-            if (isDisconnected) {
-                showCustomAlert('প্রথমে পিসির সাথে কানেক্ট করুন!');
-                return;
-            }
-
+liveMicBtn.addEventListener('click', () => {
             if (!SpeechRec) {
                 showCustomAlert("আপনার ব্রাউজারটি ওয়েব ভয়েস সাপোর্ট করে না। অন্য ব্রাউজার ব্যবহার করুন।");
                 return;
@@ -34375,13 +34400,20 @@ function getBaseUrl() {
         connectBtn.disabled = true;
         connectBtn.innerHTML = `<svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> অপেক্ষা করুন...`;
 
+// ১০ সেকেন্ডের টাইমআউট কন্ট্রোলার
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
+
         try {
-            // ভয়েস টাইপিংয়ের মতো POST রিকোয়েস্ট পাঠানো হচ্ছে
+            // POST রিকোয়েস্ট পাঠানো হচ্ছে
             const res = await fetch(`${baseUrl}/connect`, { 
                 method: 'POST', 
-                body: ' ' // এম্পটি বডি
+                body: ' ', // এম্পটি বডি
+                signal: controller.signal // টাইমআউট সিগন্যাল
             });
             
+            clearTimeout(timeoutId);
+
             if (res.ok || res.status === 200) {
                 isDisconnected = false;
                 connectBtn.className = "bg-green-500 text-white font-bold py-2 px-4 rounded-lg shadow flex items-center justify-center gap-1 min-w-[110px]";
@@ -34402,10 +34434,14 @@ function getBaseUrl() {
             }
 
         } catch (err) {
+            clearTimeout(timeoutId);
             connectBtn.className = "bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg shadow flex items-center justify-center gap-1 min-w-[110px]";
             connectBtn.innerHTML = `❌ ব্যর্থ`;
             
-            if (err.message === 'Rejected') {
+            if (err.name === 'AbortError') {
+                if (warningBox) warningBox.classList.remove('hidden');
+                showCustomAlert('কানেকশন টাইমআউট! পিসি রেসপন্স করেনি (১০ সেকেন্ড)। আইপি ঠিক আছে কিনা চেক করুন।');
+            } else if (err.message === 'Rejected') {
                 showCustomAlert('পিসি থেকে কানেকশন রিকোয়েস্ট বাতিল করা হয়েছে!');
             } else {
                 if (warningBox) warningBox.classList.remove('hidden');
