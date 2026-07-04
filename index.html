@@ -8171,6 +8171,14 @@ body.sidebar-open #sidebarOverlay {
                         <span>বাংলা ফনেটিক (Avro)</span>
                         <svg class="w-4 h-4 text-indigo-600 hidden check-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
                     </button>
+					<button class="layout-option w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 flex items-center justify-between group" data-layout="arabic_phonetic">
+    <span>আরবি (Phonetic)</span>
+    <svg class="w-4 h-4 text-indigo-600 hidden check-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+</button>
+<button class="layout-option w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 flex items-center justify-between group" data-layout="arabic_101">
+    <span>আরবি (International)</span>
+    <svg class="w-4 h-4 text-indigo-600 hidden check-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+</button>
 					
                 </div>
             </div>
@@ -31296,9 +31304,23 @@ if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
         voiceBtn.classList.remove('listening');
     };
 
-    recognition.onresult = function(event) {
+recognition.onresult = function(event) {
         const transcript = event.results[0][0].transcript.trim();
         console.log("Voice Command/Text Received:", transcript);
+
+        // +++ ম্যাজিক ১: যদি পিসি কানেক্টেড থাকে, তবে সরাসরি পিসিতে পাঠিয়ে দাও +++
+        if (window.isPcVoiceConnected && window.sendVoiceDataToPC) {
+            window.sendVoiceDataToPC(transcript);
+            showCustomAlert('পিসিতে টাইপ করা হয়েছে: ' + transcript);
+            
+            // যদি ইউজার PC Voice Client ট্যাবে থাকে, তবে সেখানকার টেক্সটবক্সেও দেখাবে
+            const pcTextBox = document.getElementById('pcVoiceTextBox');
+            if (pcTextBox && document.getElementById('pcVoiceClientContent').classList.contains('active')) {
+                pcTextBox.value += (pcTextBox.value ? ' ' : '') + transcript + " (Sent ✓)";
+            }
+            return; // পিসিতে পাঠালে লোকাল অ্যাপে আর কিছু করবে না
+        }
+        // +++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
         // ফোকাস করা এলিমেন্ট চেক করা
         const activeEl = document.activeElement;
@@ -31311,25 +31333,18 @@ if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
         if (isEditable) {
             // যদি কোনো ইনপুট ফিল্ড সিলেক্ট করা থাকে, সেখানে টেক্সট ইনসার্ট হবে
             if (activeEl.isContentEditable) {
-                // নোটপ্যাড বা contenteditable ডিভ-এর জন্য
-                // execCommand 'insertText' কার্সরের পজিশনে প্লেইন টেক্সট ইনসার্ট করে এবং আনডু হিস্ট্রি ঠিক রাখে
                 document.execCommand('insertText', false, transcript + ' ');
             } else {
-                // ইনপুট বা টেক্সটএরিয়া-এর জন্য
                 const start = activeEl.selectionStart;
                 const end = activeEl.selectionEnd;
                 const text = activeEl.value;
                 const before = text.substring(0, start);
                 const after = text.substring(end, text.length);
                 
-                // টেক্সট ইনসার্ট করা (শেষে একটি স্পেসসহ)
                 activeEl.value = before + transcript + " " + after;
                 
-                // কার্সর পজিশন আপডেট করা
                 const newCursorPos = start + transcript.length + 1;
                 activeEl.selectionStart = activeEl.selectionEnd = newCursorPos;
-                
-                // ইভেন্ট ডিসপ্যাচ করা যাতে রিয়েল-টাইম ক্যালকুলেশন বা লজিক কাজ করে (যেমন: ওয়ার্ড কাউন্টার)
                 activeEl.dispatchEvent(new Event('input', { bubbles: true }));
             }
         } else {
@@ -31352,8 +31367,22 @@ if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
             e.preventDefault();
         });
 
-        voiceBtn.addEventListener('click', () => {
+voiceBtn.addEventListener('click', () => {
             try {
+                // +++ ম্যাজিক ২: বর্তমান লেআউট অনুযায়ী ভয়েসের ভাষা সেট করা +++
+                if (typeof currentLayout !== 'undefined') {
+                    if (currentLayout === 'english') {
+                        recognition.lang = 'en-US';
+                    } else if (currentLayout === 'arabic_phonetic' || currentLayout === 'arabic_101') {
+                        recognition.lang = 'ar-SA';
+                    } else {
+                        recognition.lang = 'bn-BD'; // বাংলা (ইউনিকোড, ফনেটিক, আন্সি)
+                    }
+                } else {
+                    recognition.lang = 'bn-BD'; // ফলব্যাক
+                }
+                // +++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
                 recognition.start();
             } catch (e) {
                 console.log("Recognition already started or error:", e);
@@ -31945,6 +31974,29 @@ let currentLayout = 'english';
 	let phoneticEnglishBuffer = '';
     let phoneticBanglaBuffer = '';
 
+// --- আরবি ফনেটিক এবং 101 ম্যাপিং ---
+    const arabicPhoneticMap = {
+        "0": "٠", "1": "١", "2": "٢", "3": "٣", "4": "٤", "5": "٥", "6": "٦", "7": "٧", "8": "٨", "9": "٩",
+        "a": "ا", "b": "ب", "t": "ت", "Z": "ث", "j": "ج", "h": "ه", "H": "ح", "K": "خ", "d": "د", "D": "ذ", "r": "ر",
+        "z": "ز", "s": "س", "S": "ش", "c": "ص", "C": "ض", "p": "ط", "P": "ظ", "'": "ع", "g": "غ", "f": "ف",
+        "q": "ق", "k": "ك", "l": "ل", "m": "م", "n": "ن", "w": "و", "x": "ء", "Y": "ى", "y": "ي",
+        "E": "أ", "W": "ؤ", "I": "إ", "O": "ئ", "T": "ة",
+        "e": "َ", "i": "ِ", "u": "ُ", "U": "ٗ", "A": "ٰ", "ََ": "ً", "ِِ": "ٍ", "ُُ": "ٌ", "v": "ّ", "إإ": "ٖ",
+        "allah": "الله", "Allah": "الله", "_": "ـ", "*m": "ۘ", "*j": "ۚ", "*l": "ۙ", "*q": "ۖ", "*s": "ۗ", 
+        "o": "ْ", "~": "ٓ", "<": "ٔ", ">": "ٕ", ",": "،", "?": "؟", ";": "؛", "J": "چ", "G": "ڠ", "F": "ڤ", "X": "ڬ", "V": "ۏ", "N": "ڽ"
+    };
+
+    const arabic101Map = {
+        "`": "ذ", "1": "1", "2": "2", "3": "3", "4": "4", "5": "5", "6": "6", "7": "7", "8": "8", "9": "9", "0": "0", "-": "-", "=": "=",
+        "q": "ض", "w": "ص", "e": "ث", "r": "ق", "t": "ف", "y": "غ", "u": "ع", "i": "ه", "o": "خ", "p": "ح", "[": "ج", "]": "د",
+        "a": "ش", "s": "س", "d": "ي", "f": "ب", "g": "ل", "h": "ا", "j": "ت", "k": "ن", "l": "م", ";": "ك", "'": "ط", "\\": "\\",
+        "z": "ئ", "x": "ء", "c": "ؤ", "v": "ر", "b": "لا", "n": "ى", "m": "ة", ",": "و", ".": "ز", "/": "ظ",
+        "~": "ّ", "!": "!", "@": "@", "#": "#", "$": "$", "%": "%", "^": "^", "&": "&", "*": "*", "(": ")", ")": "(", "_": "_", "+": "+",
+        "Q": "َ", "W": "ً", "E": "ُ", "R": "ٌ", "T": "لإ", "Y": "إ", "U": "‘", "I": "÷", "O": "×", "P": "؛", "{": "<", "}": ">",
+        "A": "ِ", "S": "ٍ", "D": "]", "F": "[", "G": "لأ", "H": "أ", "J": "ـ", "K": "،", "L": "/", ":": ":", "\"": "\"", "|": "|",
+        "Z": "~", "X": "ْ", "C": "}", "V": "{", "B": "لآ", "N": "آ", "M": "’", "<": ",", ">": ".", "?": "؟"
+    };
+	
     // ====================================================================
     // START: PARSE PHONETIC ENGINE (Avro Style)
     // ====================================================================
@@ -32311,7 +32363,7 @@ const indVowMap = {
             }
         });
 
-        if (indicator && layoutBtn) {
+if (indicator && layoutBtn) {
             indicator.classList.remove('hidden');
             const shortcutHint = '(Ctrl+Space / Ctrl+K)';
             if (currentLayout === 'english') {
@@ -32323,6 +32375,12 @@ const indVowMap = {
             } else if (currentLayout === 'bijoy_ansi') {
                 indicator.className = "absolute top-0 right-0 block h-2.5 w-2.5 rounded-full bg-blue-500 ring-2 ring-white transform translate-x-1/4 -translate-y-1/4";
                 layoutBtn.setAttribute('data-tooltip', `বিজয় আনসি ${shortcutHint}`);
+            } else if (currentLayout === 'phonetic') {
+                indicator.className = "absolute top-0 right-0 block h-2.5 w-2.5 rounded-full bg-purple-500 ring-2 ring-white transform translate-x-1/4 -translate-y-1/4";
+                layoutBtn.setAttribute('data-tooltip', `বাংলা ফনেটিক (Avro) ${shortcutHint}`);
+            } else if (currentLayout === 'arabic_phonetic' || currentLayout === 'arabic_101') {
+                indicator.className = "absolute top-0 right-0 block h-2.5 w-2.5 rounded-full bg-yellow-500 ring-2 ring-white transform translate-x-1/4 -translate-y-1/4";
+                layoutBtn.setAttribute('data-tooltip', `${currentLayout === 'arabic_phonetic' ? 'Arabic Phonetic' : 'Arabic 101'} ${shortcutHint}`);
             }
         }
         
@@ -32331,7 +32389,9 @@ const indVowMap = {
                 'english': 'English',
                 'bijoy_unicode': 'বিজয় ইউনিকোড',
                 'bijoy_ansi': 'বিজয় আনসি',
-				'phonetic': 'বাংলা ফনেটিক (Avro)'
+                'phonetic': 'বাংলা ফনেটিক (Avro)',
+                'arabic_phonetic': 'Arabic Phonetic',
+                'arabic_101': 'Arabic 101'
             };
             showCustomAlert(`কীবোর্ড লেআউট: ${layoutNames[currentLayout]}`);
         }
@@ -32417,7 +32477,7 @@ document.addEventListener('keydown', function(e) {
         const isEditable = target.tagName === 'TEXTAREA' || target.tagName === 'INPUT' || target.isContentEditable;
         
         // --- নতুন: ডিরেক্ট লেআউট শর্টকাট (Ctrl + 1, 2, 3, 4) ---
-        if (e.ctrlKey && !e.altKey && !e.shiftKey) {
+if (e.ctrlKey && !e.altKey && !e.shiftKey) {
             if (e.key === '1') {
                 e.preventDefault();
                 setKeyboardLayout('bijoy_unicode', true);
@@ -32433,6 +32493,14 @@ document.addEventListener('keydown', function(e) {
             } else if (e.key === '4') {
                 e.preventDefault();
                 setKeyboardLayout('phonetic', true);
+                return;
+            } else if (e.key === '5') {
+                e.preventDefault();
+                setKeyboardLayout('arabic_phonetic', true);
+                return;
+            } else if (e.key === '6') {
+                e.preventDefault();
+                setKeyboardLayout('arabic_101', true);
                 return;
             }
         }
@@ -32573,7 +32641,42 @@ document.addEventListener('keydown', function(e) {
 
         const key = e.key;
         let isShiftPressed = e.shiftKey;
+// --- আরবি 101 টাইপিং লজিক ---
+        if (currentLayout === 'arabic_101') {
+            // arabic101Map এ সরাসরি e.key (shift সহ/ছাড়া) ম্যাপ করা আছে
+            let outputChar = arabic101Map[key] || key;
+            insertTextToElement(target, outputChar);
+            return;
+        }
 
+        // --- আরবি ফনেটিক টাইপিং লজিক ---
+        if (currentLayout === 'arabic_phonetic') {
+            let outputChar = arabicPhoneticMap[key] || key;
+            let combinedBuffer = typeBuffer + outputChar;
+            let matchLen = 0;
+            let bestOutput = "";
+
+            // ম্যাক্রো চেক (যেমন: "allah", "ََ")
+            for (const [pattern, replacement] of Object.entries(arabicPhoneticMap)) {
+                if (pattern.length > 1 && combinedBuffer.length >= pattern.length && combinedBuffer.endsWith(pattern)) {
+                    if (pattern.length > matchLen) {
+                        matchLen = pattern.length;
+                        bestOutput = replacement;
+                    }
+                }
+            }
+
+            if (matchLen > 0) {
+                let backspaceCount = Math.max(0, matchLen - outputChar.length);
+                insertTextToElement(target, bestOutput, backspaceCount);
+                typeBuffer = combinedBuffer.slice(0, -matchLen) + bestOutput;
+            } else {
+                insertTextToElement(target, outputChar);
+                typeBuffer += outputChar;
+            }
+            return;
+        }
+		
         // গেট বিজয় চার ম্যাপ
         const getBijoyChar = (k) => {
             const map = {
@@ -33892,6 +33995,19 @@ function initializePcVoiceClient() {
     const btnClear = document.getElementById('pcVoiceClearBtn');
 
     let isDisconnected = true;
+    window.isPcVoiceConnected = false; // +++ গ্লোবাল স্ট্যাটাস +++
+
+    // +++ গ্লোবাল সেন্ড ফাংশন (যাতে যেকোনো জায়গা থেকে পিসিতে ডাটা পাঠানো যায়) +++
+    window.sendVoiceDataToPC = function(text) {
+        let ip = ipInput.value.trim().replace(/^https?:\/\//, '').split(':')[0];
+        if (!ip) return;
+        fetch(`http://${ip}:5050/type`, { 
+            method: 'POST', 
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'text/plain' },
+            body: text 
+        }).catch(err => console.error("Global PC Send Error:", err));
+    };
 
     // লোকাল স্টোরেজ থেকে আইপি লোড
     if (ipInput && !ipInput.value) {
@@ -33960,8 +34076,10 @@ function initializePcVoiceClient() {
                     body: ' ' 
                 });
 
-                if (res.ok || res.status === 200) {
+if (res.ok || res.status === 200) {
                     isDisconnected = false;
+                    window.isPcVoiceConnected = true;
+					
                     connectBtn.className = "bg-green-500 text-white font-bold py-2 px-4 rounded-lg shadow transition-colors flex items-center justify-center gap-1 min-w-[110px]";
                     connectBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" /></svg> কানেক্টেড`;
                     if(warningBox) warningBox.classList.add('hidden');
@@ -33993,9 +34111,11 @@ function initializePcVoiceClient() {
                 let ip = ipInput.value.trim().replace(/^https?:\/\//, '').split(':')[0];
                 const baseUrl = `http://${ip}:5050`;
 
-                fetch(`${baseUrl}/disconnect`, { method: 'POST', mode: 'no-cors' }).catch(e => console.log(e));
+		fetch(`${baseUrl}/disconnect`, { method: 'POST', mode: 'no-cors' }).catch(e => console.log(e));
                 
                 isDisconnected = true;
+                window.isPcVoiceConnected = false;
+				
                 connectBtn.className = "bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg shadow transition-colors flex items-center justify-center gap-2 min-w-[110px]";
                 connectBtn.innerHTML = 'কানেক্ট';
                 disconnectBtn.classList.add('hidden');
