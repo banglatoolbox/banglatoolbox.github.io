@@ -7144,6 +7144,21 @@ body.sidebar-open #sidebarOverlay {
 }
 /* কীবোর্ড ড্রপডাউন এনিমেশন */
 
+/* উইন্ডোজ ড্রপডাউন এনিমেশন */
+#windowsMenuDropdown {
+    transition: opacity 0.2s ease-out, transform 0.2s ease-out;
+}
+#windowsMenuDropdown.hidden {
+    opacity: 0;
+    transform: scale(0.95);
+    pointer-events: none;
+}
+#windowsMenuDropdown:not(.hidden) {
+    opacity: 1;
+    transform: scale(1);
+    pointer-events: auto;
+}
+
 /* --- Live Cricket Ticker Styles (New) --- */
 #cricket-ticker-container {
     transition: all 0.5s ease;
@@ -8152,9 +8167,39 @@ body.sidebar-open #sidebarOverlay {
                         <span>বিজয় আনসি (ANSI)</span>
                         <svg class="w-4 h-4 text-indigo-600 hidden check-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
                     </button>
-                
-                    <!-- নতুন যুক্ত করা উইন্ডোজ অ্যাপ ডাউনলোড লিংক -->
-                    <div class="border-t border-gray-200 dark:border-gray-600 mt-1 pt-1 has-tooltip" data-tooltip="উইন্ডোজ কীবোর্ড Kotha Keyboard ডাউনলোড করুন">
+
+                </div>
+            </div>
+        </div>
+        <!-- End Keyboard Layout Toggle -->
+
+        <!-- PWA Install Button -->
+        <!-- ক্লাস voice-command-btn যুক্ত করা হয়েছে -->
+        <button id="pwaInstallBtn" type="button" class="voice-command-btn w-9 h-9 bg-indigo-100 dark:bg-gray-700 hover:bg-indigo-200 dark:hover:bg-gray-600 text-indigo-600 dark:text-indigo-300 rounded-full flex justify-center items-center transition-all duration-300 shadow-sm" title="অ্যাপটি ইন্সটল করুন" style="display: none;">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+        </button>
+
+    </div> <!-- বামপাশের গ্রুপ শেষ -->
+
+    <!-- টাইটেল (মাঝে) -->
+    <h2 id="main-heading" class="text-2xl font-bold text-gray-800 dark:text-white mb-0">বাংলা টুলবক্স</h2>
+    
+<!-- ডানপাশের আইকন গ্রুপ (উইন্ডোজ, টেলিগ্রাম, ডোনেট) -->
+    <div class="flex items-center gap-1"> 
+
+        <!-- নতুন: উইন্ডোজ মেনু ড্রপডাউন -->
+        <div class="relative inline-block text-left" id="windows-menu-container">
+            <button id="windowsMenuBtn" type="button" class="voice-command-btn w-9 h-9 bg-indigo-100 dark:bg-gray-700 hover:bg-indigo-200 dark:hover:bg-gray-600 text-indigo-600 dark:text-indigo-300 rounded-full flex justify-center items-center transition-all duration-300 shadow-sm has-tooltip" data-tooltip="উইন্ডোজ টুলস">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M0 3.449L9.75 2.1v9.451H0m10.949-9.602L24 0v11.4H10.949M0 12.6h9.75v9.451L0 20.699M10.949 12.6H24V24l-12.951-1.801"/>
+                </svg>
+            </button>
+
+            <!-- Windows Dropdown Menu -->
+            <div id="windowsMenuDropdown" class="hidden absolute right-0 mt-2 w-56 rounded-md shadow-lg bg-white dark:bg-gray-700 ring-1 ring-black ring-opacity-5 focus:outline-none z-50 origin-top-right transform transition-all duration-200 border border-gray-200 dark:border-gray-600">
+                <div class="py-1" role="menu">
+                    <!-- উইন্ডোজ অ্যাপ ডাউনলোড লিংক -->
+                    <div class="has-tooltip" data-tooltip="উইন্ডোজ কীবোর্ড Kotha Keyboard ডাউনলোড করুন">
                         <a href="https://kothakeyboard.github.io/" target="_blank" class="w-full text-left px-4 py-2 text-sm text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-gray-600 flex items-center gap-2 group transition-colors">
                             <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
                                 <path d="M0 3.449L9.75 2.1v9.451H0m10.949-9.602L24 0v11.4H10.949M0 12.6h9.75v9.451L0 20.699M10.949 12.6H24V24l-12.951-1.801"/>
@@ -8178,32 +8223,9 @@ body.sidebar-open #sidebarOverlay {
                             <span>পিসি ভয়েস টাইপিং</span>
                         </button>
                     </div>
-
                 </div>
             </div>
         </div>
-        <!-- End Keyboard Layout Toggle -->
-
-        <!-- PWA Install Button -->
-        <!-- ক্লাস voice-command-btn যুক্ত করা হয়েছে -->
-        <button id="pwaInstallBtn" type="button" class="voice-command-btn w-9 h-9 bg-indigo-100 dark:bg-gray-700 hover:bg-indigo-200 dark:hover:bg-gray-600 text-indigo-600 dark:text-indigo-300 rounded-full flex justify-center items-center transition-all duration-300 shadow-sm" title="অ্যাপটি ইন্সটল করুন" style="display: none;">
-            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-        </button>
-
-    </div> <!-- বামপাশের গ্রুপ শেষ -->
-
-    <!-- টাইটেল (মাঝে) -->
-    <h2 id="main-heading" class="text-2xl font-bold text-gray-800 dark:text-white mb-0">বাংলা টুলবক্স</h2>
-    
-    <!-- ডানপাশের আইকন গ্রুপ (উইন্ডোজ, টেলিগ্রাম, ডোনেট) -->
-    <div class="flex items-center gap-1"> 
-
-        <!-- নতুন: উইন্ডোজ কীবোর্ড ডাউনলোড বাটন -->
-        <a href="https://kothakeyboard.github.io/" target="_blank" class="voice-command-btn w-9 h-9 bg-indigo-100 dark:bg-gray-700 hover:bg-indigo-200 dark:hover:bg-gray-600 text-indigo-600 dark:text-indigo-300 rounded-full flex justify-center items-center transition-all duration-300 shadow-sm has-tooltip" data-tooltip="Kotha Keyboard ডাউনলোড করুন">
-            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M0 3.449L9.75 2.1v9.451H0m10.949-9.602L24 0v11.4H10.949M0 12.6h9.75v9.451L0 20.699M10.949 12.6H24V24l-12.951-1.801"/>
-            </svg>
-        </a>
 
         <!-- ********** টেলিগ্রাম আইকন বাটন ********** -->
         <a href="https://t.me/kothakeyboard" target="_blank" class="voice-command-btn w-9 h-9 bg-indigo-100 dark:bg-gray-700 hover:bg-indigo-200 dark:hover:bg-gray-600 text-[#2AABEE] rounded-full flex justify-center items-center transition-all duration-300 shadow-sm has-tooltip" data-tooltip="টেলিগ্রাম গ্রুপে যুক্ত হোন">
@@ -16245,6 +16267,28 @@ window.addEventListener('click', (e) => {
         settingsMenuBtn.querySelector('svg').classList.remove('rotate-180');
     }
 });
+
+// START: WINDOWS DROPDOWN LOGIC
+
+const windowsMenuBtn = document.getElementById('windowsMenuBtn');
+const windowsMenuDropdown = document.getElementById('windowsMenuDropdown');
+
+if (windowsMenuBtn) {
+    windowsMenuBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        windowsMenuDropdown.classList.toggle('hidden');
+    });
+}
+
+window.addEventListener('click', (e) => {
+    if (windowsMenuDropdown && !windowsMenuDropdown.classList.contains('hidden')) {
+        if (!windowsMenuDropdown.contains(e.target) && !windowsMenuBtn.contains(e.target)) {
+            windowsMenuDropdown.classList.add('hidden');
+        }
+    }
+});
+// END: WINDOWS DROPDOWN LOGIC
+
 // ====================================================================
 // END: DROPDOWN MENU LOGIC
 // ====================================================================
@@ -16736,22 +16780,22 @@ initializeBackButtons();
         showTab('notepad');
         await initializeNotepad(); // Notepad চালু করার জন্য এই ফাংশন কল করুন
     });
-	if (fileTransferTab) {
+if (fileTransferTab) {
 		fileTransferTab.addEventListener('click', () => {
         showTab('fileTransfer');
-        const layoutDropdown = document.getElementById('keyboardLayoutDropdown');
+        const layoutDropdown = document.getElementById('windowsMenuDropdown'); // পরিবর্তিত
         if (layoutDropdown) layoutDropdown.classList.add('hidden');
 		});
-		}
+    }
+
     if (webSearchTab) webSearchTab.addEventListener('click', () => showTab('webSearch'));
 	if (pcVoiceClientTab) {
-    pcVoiceClientTab.addEventListener('click', () => {
-        showTab('pcVoiceClient');
-        // লেআউট ড্রপডাউন বন্ধ করার জন্য
-        const layoutDropdown = document.getElementById('keyboardLayoutDropdown');
-        if (layoutDropdown) layoutDropdown.classList.add('hidden');
-    });
-}
+        pcVoiceClientTab.addEventListener('click', () => {
+            showTab('pcVoiceClient');
+            const layoutDropdown = document.getElementById('windowsMenuDropdown'); // পরিবর্তিত
+            if (layoutDropdown) layoutDropdown.classList.add('hidden');
+        });
+    }
     if (healthLifestyleTab) healthLifestyleTab.addEventListener('click', () => {showTab('healthLifestyle');	initializeHealthLifestyleTab();});
     if (clockTab) clockTab.addEventListener('click', () => showTab('clock'));
     if (playerTab) playerTab.addEventListener('click', () => showTab('player'));
