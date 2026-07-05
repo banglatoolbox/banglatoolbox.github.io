@@ -14461,9 +14461,47 @@ const phoneticCombinations = {
         // ====================================================================
 
 
-        // দীর্ঘতম থেকে ছোট ক্রমে কীগুলি সাজান যাতে দীর্ঘ ক্রমগুলি প্রথমে হ্যান্ডেল করা যায়
-        const sortedUnicodeKeys = Object.keys(unicodeToBijoyMap).sort((a, b) => b.length - a.length);
+const sortedUnicodeKeys = Object.keys(unicodeToBijoyMap).sort((a, b) => b.length - a.length);
         const sortedBijoyKeys = Object.keys(bijoyToUnicodeMap).sort((a, b) => b.length - a.length);
+
+        // +++ গ্লোবাল ফাংশন: ইউনিকোড থেকে বিজয় আন্সি (ভয়েস টাইপিং এর জন্য) +++
+        window.globalUnicodeToBijoy = function(unicodeInput) {
+            unicodeInput = unicodeInput.replace(/য়/g, 'য়').replace(/ড়/g, 'ড়').replace(/ঢ়/g, 'ঢ়');
+            const bengaliConsonants = 'কখগঘঙচছজঝঞটঠডঢণতথদধনপফবভমযরলশষসহড়ঢ়য়';
+            const unicodeIkar = '\u09BF'; const unicodeEkar = '\u09C7'; const unicodeOikar = '\u09C8'; const unicodeOkar = '\u09CB'; const unicodeOukar = '\u09CC'; const unicodeAkar = '\u09BE'; const unicodeOuKarPart2 = '\u09D7'; const unicodeHasanta = '\u09CD'; const unicodeRefChar = '\u09B0\u09CD'; const unicodeJaPhala = '\u09CD\u09AF'; const unicodeRaPhala = '\u09CD\u09B0';
+            const consonantOrConjunct = `(?:(?:[${bengaliConsonants}]${unicodeHasanta})+[${bengaliConsonants}]|[${bengaliConsonants}])`;
+            const o_ou_kar_regex = new RegExp(`(${consonantOrConjunct})(${unicodeOkar}|${unicodeOukar})`, 'g');
+            unicodeInput = unicodeInput.replace(o_ou_kar_regex, (match, base, vowelSign) => {
+                if (vowelSign === unicodeOkar) return base + unicodeEkar + unicodeAkar;
+                if (vowelSign === unicodeOukar) return base + unicodeEkar + unicodeOuKarPart2;
+                return match;
+            });
+            const precedingVowelRegex = new RegExp(`(${unicodeRefChar})?(${consonantOrConjunct})((?:${unicodeJaPhala}|${unicodeRaPhala})?)(${unicodeIkar}|${unicodeEkar}|${unicodeOikar})`, 'g');
+            unicodeInput = unicodeInput.replace(precedingVowelRegex, (match, reph, base, phala, vowel) => { return vowel + (reph || '') + base + (phala || ''); });
+            let bijoyOutput = ''; let k = 0;
+            while (k < unicodeInput.length) {
+                let foundMatch = false;
+                if (unicodeInput.substring(k, k + 2) === unicodeRefChar) {
+                    let baseCluster = ''; let clusterLen = 0;
+                    for (const key of sortedUnicodeKeys) {
+                        if (key.length > 0 && unicodeInput.substring(k + 2, k + 2 + key.length) === key) { baseCluster = key; clusterLen = key.length; break; }
+                    }
+                    if (clusterLen > 0) { bijoyOutput += unicodeToBijoyMap[baseCluster] + '©'; k += 2 + clusterLen; foundMatch = true; }
+                }
+                if (!foundMatch) {
+                    for (const key of sortedUnicodeKeys) {
+                        if (key.length > 0 && unicodeInput.substring(k, k + key.length) === key) { bijoyOutput += unicodeToBijoyMap[key]; k += key.length; foundMatch = true; break; }
+                    }
+                }
+                if (!foundMatch) { bijoyOutput += unicodeInput[k]; k++; }
+            }
+            for (const [wrong, correct] of Object.entries(manualAnsiReplacements)) {
+                if (wrong) { const regex = new RegExp(wrong.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'); bijoyOutput = bijoyOutput.replace(regex, correct); }
+            }
+            bijoyOutput = bijoyOutput.replace(/^‡/gm, '†').replace(/\|‡/g, '|†').replace(/^‰/gm, 'ˆ').replace(/\|‰/g, '|ˆ');
+            return bijoyOutput;
+        };
+        // +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 	function convertLeftToRight() {
             const textAreaLeft = document.getElementById('textAreaLeft');
