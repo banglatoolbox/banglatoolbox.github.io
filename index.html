@@ -7954,9 +7954,8 @@ body.sidebar-open #sidebarOverlay {
     display: none !important;
 }
 .textarea-expanded {
-    height: 60vh !important; /* স্ক্রিনের ৬০% জায়গা নিবে */
-    min-height: 400px !important;
-    transition: height 0.3s ease-in-out; /* স্মুথ ট্রানজিশন */
+    height: 60vh; /* !important সরানো হয়েছে যাতে ড্র্যাগ করে রিসাইজ করা যায় */
+    transition: height 0.3s ease-in-out;
 }
 .clickable-header {
     cursor: pointer;
@@ -7964,7 +7963,7 @@ body.sidebar-open #sidebarOverlay {
     display: inline-block;
 }
 .clickable-header:hover {
-    color: #3b82f6; /* নীল রঙ হোভার করলে */
+    color: #3b82f6; 
 }
 .dark .clickable-header:hover {
     color: #60a5fa;
@@ -14251,51 +14250,49 @@ const textAreaLeftForToggle = document.getElementById('textAreaLeft');
 const textAreaRightForToggle = document.getElementById('textAreaRight');
 
 if (textAreaLeftForToggle && textAreaRightForToggle) {
-    // সেকশন কন্টেইনারগুলো খুঁজে বের করা
     const leftSection = textAreaLeftForToggle.closest('.font-converter-section');
     const rightSection = textAreaRightForToggle.closest('.font-converter-section');
     
-    // হেডিংগুলো (ইউনিকোড এবং বিজয়) খুঁজে বের করা
     const unicodeHeader = leftSection.querySelector('.font-section-header h2');
     const bijoyHeader = rightSection.querySelector('.font-section-header h2');
 
-    // ব্যবহারকারীকে বোঝানোর জন্য কার্সর ও টাইটেল সেট করা
     unicodeHeader.classList.add('clickable-header');
     bijoyHeader.classList.add('clickable-header');
     unicodeHeader.title = "ক্লিক করে বক্সটি বড় বা ছোট করুন";
     bijoyHeader.title = "ক্লিক করে বক্সটি বড় বা ছোট করুন";
 
-    // বর্তমান স্টেট ট্র্যাক করার জন্য ভেরিয়েবল
-    let currentExpanded = 'none'; // 'none', 'left', 'right'
+    let currentExpanded = 'none';
 
-    // ইউনিকোড হেডিং এ ক্লিক ইভেন্ট
     unicodeHeader.addEventListener('click', () => {
+        // আপনি নিজে ড্র্যাগ করে সাইজ পরিবর্তন করলে যে ইনলাইন স্টাইল বসে, তা ক্লিয়ার করা হচ্ছে
+        textAreaLeftForToggle.style.height = ''; 
+        textAreaRightForToggle.style.height = '';
+
         if (currentExpanded === 'left') {
-            // যদি আগে থেকেই বড় থাকে, তবে ছোট (ডিফল্ট) করুন
             rightSection.classList.remove('font-section-hidden');
             textAreaLeftForToggle.classList.remove('textarea-expanded');
             currentExpanded = 'none';
         } else {
-            // বড় করুন এবং ডানদিকের সেকশন লুকিয়ে ফেলুন
             rightSection.classList.add('font-section-hidden');
-            leftSection.classList.remove('font-section-hidden'); // এটি দৃশ্যমান নিশ্চিত করা
+            leftSection.classList.remove('font-section-hidden');
             textAreaLeftForToggle.classList.add('textarea-expanded');
             textAreaRightForToggle.classList.remove('textarea-expanded');
             currentExpanded = 'left';
         }
     });
 
-    // বিজয় হেডিং এ ক্লিক ইভেন্ট
     bijoyHeader.addEventListener('click', () => {
+        // ইনলাইন হাইট ক্লিয়ার করা হচ্ছে
+        textAreaLeftForToggle.style.height = ''; 
+        textAreaRightForToggle.style.height = '';
+
         if (currentExpanded === 'right') {
-            // যদি আগে থেকেই বড় থাকে, তবে ছোট (ডিফল্ট) করুন
             leftSection.classList.remove('font-section-hidden');
             textAreaRightForToggle.classList.remove('textarea-expanded');
             currentExpanded = 'none';
         } else {
-            // বড় করুন এবং বামদিকের সেকশন লুকিয়ে ফেলুন
             leftSection.classList.add('font-section-hidden');
-            rightSection.classList.remove('font-section-hidden'); // এটি দৃশ্যমান নিশ্চিত করা
+            rightSection.classList.remove('font-section-hidden');
             textAreaRightForToggle.classList.add('textarea-expanded');
             textAreaLeftForToggle.classList.remove('textarea-expanded');
             currentExpanded = 'right';
